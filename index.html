@@ -119,7 +119,7 @@ nav button{border-radius:999px}nav button.on{background:var(--pink-btn);color:#f
 </div></header>
 <main class="in">
   <section class="tab on" id="t-atoi"><div class="card muted">Chargement des données…</div></section>
-  <section class="tab" id="t-bureau"><div class="row" id="objectif"></div><h1 style="margin:0;font-size:22px">La chaîne, du besoin à la signature</h1><div id="routine"></div><div class="chain" id="chain"></div><section class="card" id="echanges" aria-label="Échanges entre agents"></section></section>
+  <section class="tab" id="t-bureau"><div class="row" id="objectif"></div><div id="v-os"></div><h1 style="margin:0;font-size:22px">La chaîne, du besoin à la signature</h1><div id="routine"></div><div class="chain" id="chain"></div><section class="card" id="echanges" aria-label="Échanges entre agents"></section></section>
   <section class="tab" id="t-survie"></section>
   <section class="tab" id="t-pipeline"></section>
   <section class="tab" id="t-pilotage"></section>
@@ -248,7 +248,7 @@ function bureau(){
       h("div",{class:"bubble"},c,/Jamais lancé/.test(ag.tache)?"Pas encore lancé":ag.tache);
       if(ag.attend)h("div",{class:"att"},c,"Attend : "+ag.attend);const p=pct(ag.progression);if(p!=null&&ag.etat==="travaille"){const pr=h("div",{class:"prog"},c);h("i",{style:`width:${p}%`},pr);}}
     const f=h("div",{class:"flux"},st);h("b",{},f,"Passe à la suite : ");f.append(d.flux[s.k]||"");}
-  routine();echanges();
+  openspace(data,document.getElementById("v-os"));routine();echanges();
 }
 let tousMsg=false;const TYPEMSG={demande:"demande",transmission:"transmis",consigne:"consigne",alerte:"alerte",reponse:"réponse"};
 function duree(iso){if(!iso)return"?";const s=(Date.now()-new Date(iso))/1000;if(s<3600)return Math.max(1,Math.round(s/60))+" min";if(s<86400)return Math.round(s/3600)+" h";return Math.round(s/86400)+" j";}
@@ -333,5 +333,128 @@ async function ouvrir(mdp,retenir){try{data=await dechiffrer(mdp);}catch(_){retu
 (async()=>{try{const c=window.claude;db=c&&c.use?await c.use("db"):null;}catch(_){db=null;}
   if(db){db.collection("decisions").onSnapshot(s=>{decisions=s.docs.map(x=>Object.assign({_id:x.id},x.data()));tout();},()=>{});}else if(data)tout();})();
 </script>
+<!--OPENSPACE-->
+<style>
+/* open space des agents : îlots de bureaux, un poste illustré par agent, courrier interne animé */
+.os{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;overflow:hidden}
+.os-top{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.os-top h2{margin:0;font-size:20px}.os-leg{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
+.os-leg span{display:inline-flex;align-items:center;gap:6px}.os-leg i{width:10px;height:10px;border-radius:50%;background:var(--c);display:inline-block}
+.os-live{font-size:13px;color:var(--ink2);background:var(--soft);border-radius:10px;padding:7px 10px;margin-bottom:12px;overflow-wrap:anywhere}
+.os-live b{color:var(--accent)}
+.os-plan{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+.pod{border-radius:18px;padding:12px;background:var(--pod);border:1px solid var(--podb);min-width:0}
+.pod>h3{margin:0 0 10px;font:700 12px/1.3 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px}
+.pod>h3 small{font-weight:500;letter-spacing:0;text-transform:none;font-size:12px}
+.desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.pod.p-dir{grid-column:span 5;--pod:var(--soft);--podb:var(--line)}.pod.p-chasse{grid-column:span 7;--pod:var(--st1);--podb:var(--st1b)}
+.pod.p-cible{grid-column:span 7;--pod:var(--st2);--podb:var(--st2b)}.pod.p-place{grid-column:span 5;--pod:var(--st4);--podb:var(--st4b)}
+.pod.p-ao{grid-column:span 12;--pod:var(--st3);--podb:var(--st3b)}.pod.p-ao .desks{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+@media (max-width:1100px){.pod.p-dir,.pod.p-chasse,.pod.p-cible,.pod.p-place{grid-column:span 12}}.desk{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;min-width:0;width:100%}
+.desk:hover{border-color:var(--accent)}.desk:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+.desk.travaille{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+.desk.attente{border-color:#D97706}.desk.bloque{border-color:var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 15%,transparent)}
+.desk.vise{box-shadow:0 0 0 3px var(--pink)}
+.desk svg{display:block;width:100%;height:auto}
+.desk .nm{display:flex;align-items:center;justify-content:space-between;gap:6px;font-weight:700;font-size:14px;min-width:0}
+.desk .nm{flex-wrap:wrap;row-gap:3px}.desk .nm>span:first-child{min-width:0;overflow-wrap:break-word}.desk .nm .chip{white-space:nowrap;flex-shrink:0}
+.desk .pl{font-size:12px;font-weight:600;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.desk .say{font-size:13px;line-height:1.35;background:var(--soft);border-radius:10px;padding:7px 9px;overflow-wrap:anywhere}.desk .say>span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.desk .say.att{background:var(--warn-soft);color:var(--warn)}.desk .say.blq{background:var(--bad-soft);color:var(--bad)}
+.desk .ft{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--muted)}.desk .ft b{color:var(--pink-ink)}
+.desk.moi{background:var(--me);border:2px solid var(--amber)}
+/* poste illustré */
+.wk .scr{fill:#1b1640}.wk .s-work,.wk .s-wait,.wk .s-block,.wk .s-rest{display:none}
+.wk.w-travaille .s-work,.wk.w-attente .s-wait,.wk.w-bloque .s-block,.wk.w-repos .s-rest{display:block}
+.wk.w-travaille .scr{fill:#2a1f6b}.wk.w-attente .scr{fill:#4a3412}.wk.w-bloque .scr{fill:#5a1620}
+.wk .ln{animation:code 1.4s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:left}
+.wk .ln:nth-of-type(2){animation-delay:.3s}.wk .ln:nth-of-type(3){animation-delay:.6s}.wk .ln:nth-of-type(4){animation-delay:.9s}
+.wk.w-travaille .bras{animation:tape .35s ease-in-out infinite alternate}.wk.w-travaille .corps{animation:souffle 2.4s ease-in-out infinite}
+.wk.w-repos .corps{transform:rotate(-6deg);transform-box:fill-box;transform-origin:50% 100%}
+.wk .zz{animation:zz 2.6s ease-in infinite;opacity:0}.wk .zz:nth-of-type(2){animation-delay:1.3s}
+.wk .vap{animation:vap 2.2s ease-in-out infinite;opacity:0}.wk.w-bloque .alerte{animation:clign 1s steps(2) infinite}
+@keyframes code{from{transform:scaleX(.35)}to{transform:scaleX(1)}}@keyframes tape{to{transform:translateY(1.5px)}}
+@keyframes souffle{50%{transform:translateY(-.6px)}}@keyframes zz{0%{opacity:0;transform:translate(0,0)}30%{opacity:1}100%{opacity:0;transform:translate(6px,-14px)}}
+@keyframes vap{0%{opacity:0;transform:translateY(0)}40%{opacity:.7}100%{opacity:0;transform:translateY(-8px)}}@keyframes clign{50%{opacity:.3}}
+/* courrier interne */
+.os-fly{position:absolute;left:0;top:0;width:30px;height:30px;pointer-events:none;z-index:3;opacity:0;transition:transform 1.6s cubic-bezier(.45,.05,.3,1),opacity .3s;filter:drop-shadow(0 3px 4px rgba(0,0,0,.25))}
+.os-cap{margin-top:12px;font-size:14px;background:var(--pink-soft);color:var(--pink-ink);border-radius:10px;padding:8px 12px;min-height:38px;overflow-wrap:anywhere}
+.os-cap b{color:inherit}
+@media (max-width:600px){.os{padding:12px}.pod{padding:10px}.desks,.pod.p-ao .desks{grid-template-columns:1fr}
+ .desk{display:grid;grid-template-columns:112px minmax(0,1fr);column-gap:10px;row-gap:5px;align-items:start}
+ .desk>svg{grid-row:1/span 4;align-self:center}.desk>:not(svg){grid-column:2}}
+@media (prefers-reduced-motion:reduce){.os-fly{display:none}.wk *{animation:none!important}}
+</style>
+<script>
+/* open space : rendu indépendant de la page (utilise h, COUL, INI, ETAT, chip, duree) */
+const OS_PODS=[{k:"p-dir",t:"Direction",s:"Fixe la méthode de chacun",a:["Orchestrateur","Jérôme"]},
+ {k:"p-chasse",t:"Îlot chasse",s:"Sources, comptes, besoins",a:["Veille Sources","Veille Comptes","Veille Besoins"]},
+ {k:"p-cible",t:"Îlot ciblage et préparation",s:"Le bon manager, le bon message",a:["Ciblage Contact","Rédaction","Préparation Affaires"]},
+ {k:"p-place",t:"Îlot placement",s:"Le bon candidat, MC2 ≥ 100 €/j",a:["Matching Vivier"]},
+ {k:"p-ao",t:"Cellule appels d'offres",s:"Se met au travail dès qu'un DCE est déposé",a:["Veille AO","AO Analyse","AO Mémoire","AO Chiffrage","AO Admin","AO Relecture"]}];
+let osTimer=null,osIdx=0;
+function osIlya(x){const t=x?duree(x):"";return !t||t==="?"?"jamais":/instant/.test(t)?t:"il y a "+t;}
+function osPoste(etat,couleur,moi){
+  const s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("viewBox","0 0 200 92");s.setAttribute("class","wk w-"+etat);s.setAttribute("aria-hidden","true");
+  const peau=moi?"#e3b08c":"#e7b994";if(couleur==="#20185D")couleur="#5B4BC4";/* indigo trop sombre sur fond sombre */
+  s.innerHTML=`<ellipse cx="100" cy="88" rx="92" ry="4" fill="currentColor" opacity=".08"/>
+  <rect x="22" y="30" width="22" height="34" rx="6" fill="#3e3580" opacity=".55"/>
+  <g class="corps"><path d="M28 64 Q28 40 48 38 Q66 38 68 64Z" fill="${couleur}"/><circle cx="48" cy="26" r="11" fill="${peau}"/>
+   <path d="M37 24 Q40 11 51 13 Q60 15 59 25 Q55 18 47 19 Q41 20 37 24Z" fill="#2b2147"/></g>
+  <g class="bras"><path d="M60 46 Q78 52 92 58" stroke="${couleur}" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="93" cy="58" r="3.5" fill="${peau}"/></g>
+  <rect x="6" y="62" width="188" height="9" rx="3" fill="#3e3580"/><rect x="14" y="71" width="5" height="17" fill="#2e2766"/><rect x="181" y="71" width="5" height="17" fill="#2e2766"/>
+  <rect x="84" y="57" width="34" height="5" rx="1.5" fill="#cfc9ee"/>
+  <rect x="112" y="10" width="78" height="48" rx="5" fill="#120e2e"/><rect class="scr" x="116" y="14" width="70" height="40" rx="2"/><rect x="146" y="58" width="10" height="4" fill="#120e2e"/>
+  <g class="s-work"><rect class="ln" x="121" y="20" width="50" height="4" rx="2" fill="#EE34A0"/><rect class="ln" x="121" y="28" width="58" height="4" rx="2" fill="#AF8BF1"/>
+   <rect class="ln" x="121" y="36" width="40" height="4" rx="2" fill="#8298FF"/><rect class="ln" x="121" y="44" width="52" height="4" rx="2" fill="#EF765B"/></g>
+  <g class="s-wait"><path d="M143 20H159L151 34L159 48H143L151 34Z" fill="#E8B062"/></g>
+  <g class="s-block alerte"><path d="M151 18L167 46H135Z" fill="#F08A80"/><rect x="149.5" y="27" width="3" height="10" fill="#5a1620"/><rect x="149.5" y="40" width="3" height="3" fill="#5a1620"/></g>
+  <g class="s-rest"><text class="zz" x="140" y="40" font-size="12" font-weight="700" fill="#8E86C9">z</text><text class="zz" x="150" y="36" font-size="10" font-weight="700" fill="#8E86C9">z</text></g>
+  <g><rect x="64" y="52" width="10" height="10" rx="2" fill="#f4efe6"/><path class="vap" d="M67 49 q2 -3 0 -6" stroke="#a49dd0" stroke-width="1.4" fill="none"/></g>`;
+  return s;}
+function osTexte(a){
+  if(a.etat==="attente"||a.etat==="bloque")return {t:"Attend : "+(a.attend||a.tache||"?"),c:a.etat==="bloque"?"blq":"att"};
+  let t=a.tache||"";if(/Jamais lancé/.test(t))return {t:/^AO /.test(a.nom)?"Attend un DCE déposé par Jérôme.":"Pas encore lancé.",c:""};
+  if(a.etat==="repos"&&!/^Débloqué/.test(t))t="Dernier travail : "+t;
+  return {t,c:""};}
+function openspace(d,R){
+  if(!R)return;R.replaceChildren();const A=Object.fromEntries(d.agents.map(a=>[a.nom,a]));const tr=d.agents.filter(a=>a.etat==="travaille").length;
+  const box=h("div",{class:"os"},R);const top=h("div",{class:"os-top"},box);h("h2",{},top,"L'open space des agents");
+  const lg=h("div",{class:"os-leg"},top);[["var(--accent)","travaille"],["#D97706","attend"],["var(--bad)","bloqué"],["#9AA5B5","au repos"]].forEach(([c,t])=>{const s=h("span",{},lg);h("i",{style:"--c:"+c},s);s.append(t);});
+  const j0=(d.journal||[])[0],live=h("div",{class:"os-live"},box);
+  h("b",{},live,tr?`En direct · ${tr} agent${tr>1?"s":""} au travail · `:`Tout le monde est au repos · dernière routine ${osIlya((d.routine||{}).derniere)} · `);
+  live.append(j0?`Dernière action : ${j0.agent} — ${j0.action} (${osIlya(j0.date)})`:"");
+  const plan=h("div",{class:"os-plan"},box);
+  for(const p of OS_PODS){const pod=h("section",{class:"pod "+p.k,"aria-label":p.t},plan);const t=h("h3",{},pod);t.append(p.t);h("small",{},t,p.s);const g=h("div",{class:"desks"},pod);
+    for(const nom of p.a){
+      if(nom==="Jérôme"){const n=(d.attentes||[]).reduce((s,x)=>s+x.nb,0);const b=h("button",{type:"button",class:"desk moi","data-nom":"Jérôme","aria-label":`Ton bureau : ${n} décisions t'attendent`},g);
+        b.onclick=()=>{if(typeof onglet==="function")onglet("atoi");};b.append(osPoste(n?"attente":"repos","#D41C86",true));
+        const nm=h("div",{class:"nm"},b);h("span",{},nm,"Toi, Jérôme");h("span",{class:"chip",style:"background:var(--pink-btn);color:#fff"},nm,String(n));
+        h("span",{},h("div",{class:"say"},b),n?`${n} décision${n>1?"s":""} t'attendent : leads à valider, mails à envoyer, relances.`:"Rien en attente : au téléphone !");
+        h("div",{class:"ft"},b).append("Appeler, rencontrer, signer");continue;}
+      const a=A[nom];if(!a)continue;const e=ETAT[a.etat]||ETAT.repos;
+      const b=h("button",{type:"button",class:"desk "+a.etat,"data-nom":nom,"aria-label":`${nom}, ${e.t}`},g);b.onclick=()=>{if(typeof ouvrirAgent==="function")ouvrirAgent(nom);};
+      b.append(osPoste(a.etat,COUL[nom]||"#5A5480"));const nm=h("div",{class:"nm"},b);h("span",{},nm,nom);chip(a.etat,nm);
+      if(a.plan)h("div",{class:"pl",title:a.plan.consigne||""},b,`Plan ${a.plan.code} · ${a.plan.nom}`);
+      const x=osTexte(a);h("span",{},h("div",{class:"say "+x.c,title:x.t},b),x.t);
+      const ft=h("div",{class:"ft"},b);const bx=h("span",{},ft);if(a.boite){h("b",{},bx,"✉ "+a.boite);bx.append(" en boîte");}else bx.append("boîte vide");
+      h("span",{},ft,a.maj?osIlya(a.maj):"jamais lancé");}}
+  const fly=h("div",{class:"os-fly"},box);fly.innerHTML='<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M2 11 22 3 15 21 11 13Z" fill="#EE34A0"/><path d="M11 13 22 3" stroke="#fff" stroke-width="1.2"/></svg>';
+  const cap=h("div",{class:"os-cap",role:"status"},box);
+  const lieu=n=>n==="Pilotage"?"Orchestrateur":n,poste=n=>box.querySelector(`[data-nom="${CSS.escape(lieu(n))}"]`);
+  const vols=(d.echanges||[]).filter(m=>m.statut==="ouvert"&&lieu(m.de)!==lieu(m.a)&&poste(m.de)&&poste(m.a));
+  if(osTimer){clearInterval(osTimer);osTimer=null;}
+  if(!vols.length){cap.textContent="Courrier interne : aucun message en cours entre les agents.";return;}
+  const centre=el=>{const r=el.getBoundingClientRect(),o=box.getBoundingClientRect();return [r.left-o.left+r.width/2-15,r.top-o.top+r.height*0.3];};
+  const envoyer=()=>{if(!box.isConnected||!box.offsetParent)return;const m=vols[osIdx++%vols.length],de=poste(m.de),a=poste(m.a);
+    box.querySelectorAll(".desk.vise").forEach(x=>x.classList.remove("vise"));a.classList.add("vise");
+    const [x1,y1]=centre(de),[x2,y2]=centre(a);fly.style.transition="none";fly.style.opacity="1";fly.style.transform=`translate(${x1}px,${y1}px)`;void fly.offsetWidth;
+    fly.style.transition="";requestAnimationFrame(()=>{fly.style.transform=`translate(${x2}px,${y2}px) rotate(${x2<x1?-150:20}deg)`;});setTimeout(()=>{fly.style.opacity="0";},1700);
+    cap.replaceChildren();h("b",{},cap,`✉ ${m.de} → ${m.a}`);
+    cap.append(` · ${({consigne:"consigne",transmission:"transmis",demande:"demande",alerte:"alerte",reponse:"réponse"})[m.type]||m.type} : ${m.sujet||""}`);
+    if(vols.length>1)h("span",{style:"opacity:.75"},cap,` (${(osIdx-1)%vols.length+1}/${vols.length})`);};
+  setTimeout(envoyer,300);osTimer=setInterval(envoyer,4200);}
+</script>
+<!--/OPENSPACE-->
 
 </body></html>
