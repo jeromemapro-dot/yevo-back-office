@@ -433,7 +433,7 @@ const BU_SVC={vivant:"#1F6F46","menacé":"#B45309",critique:"#B42318",agonie:"#7
 const BU={root:null,d:null,vols:[],idx:0,timer:null,sel:null};
 function osIlya(x){const t=x?duree(x):"";return !t||t==="?"?"jamais":/instant/.test(t)?t:"il y a "+t;}
 function buVie(d,nom){const cle=/^AO /.test(nom)?"Cellule AO":nom;return (d.survie||[]).find(s=>s.nom===cle)||null;}
-function buPerso(i,couleur){
+function buPerso(i,couleur,nom){
   const peau=["#f1c9a5","#e0ac87","#c68b62","#8d5a3b"][i%4],chev=["#2b2147","#5a3a22","#b0763a","#1a1a1a","#7a3b2e","#8a8a96"][i%6];
   if(couleur==="#20185D")couleur="#5B4BC4";
   const coupe=[`<path d="M37 24 Q40 11 51 13 Q60 15 59 25 Q55 18 47 19 Q41 20 37 24Z" fill="${chev}"/>`,
@@ -450,8 +450,7 @@ function buPerso(i,couleur){
   <rect x="84" y="57" width="34" height="5" rx="1.5" fill="#cfc9ee"/>
   <rect x="112" y="8" width="80" height="50" rx="5" fill="#120e2e"/><rect class="scr" x="116" y="12" width="72" height="42" rx="2"/><rect x="147" y="58" width="10" height="4" fill="#120e2e"/>
   <circle class="gyro" cx="152" cy="5" r="5" fill="#ff5a4d"/>
-  <g class="s-work"><rect class="ln" x="121" y="18" width="50" height="4" rx="2" fill="#EE34A0"/><rect class="ln" x="121" y="26" width="60" height="4" rx="2" fill="#AF8BF1"/>
-   <rect class="ln" x="121" y="34" width="40" height="4" rx="2" fill="#8298FF"/><rect class="ln" x="121" y="42" width="54" height="4" rx="2" fill="#EF765B"/></g>
+  ${buEcran(nom)}
   <g class="s-wait"><path d="M144 18H160L152 33L160 48H144L152 33Z" fill="#E8B062"/></g>
   <g class="s-block"><path d="M152 16L169 46H135Z" fill="#F08A80"/><rect x="150.5" y="26" width="3" height="10" fill="#5a1620"/><rect x="150.5" y="39" width="3" height="3" fill="#5a1620"/></g>
   <g class="s-rest"><text class="zz" x="140" y="40" font-size="13" font-weight="700" fill="#8E86C9">z</text><text class="zz" x="152" y="35" font-size="10" font-weight="700" fill="#8E86C9">z</text></g>
@@ -464,24 +463,21 @@ function buTexte(a){
   return a.etat==="repos"&&!/^Débloqué/.test(t)?"Dernier travail : "+t:t;}
 function buConstruire(R){
   R.replaceChildren();const box=h("div",{class:"bu"},R);
-  const mur=h("div",{class:"bu-mur"},box);h("div",{class:"bu-blanc"},mur);h("div",{class:"bu-score"},mur);
-  const deco=h("div",{class:"bu-deco","aria-hidden":"true"},mur);const f=h("div",{class:"bu-fenetre"},deco);
-  f.innerHTML='<svg viewBox="0 0 220 96"><rect class="ciel" width="220" height="96" fill="#8298FF"/><circle class="astre" cx="170" cy="26" r="13" fill="#FFE9A8"/><path d="M0 96V70l22-14 20 12 26-26 24 22 18-10 30 18 24-20 28 16 28-8v36Z" fill="#20185D" opacity=".85"/><path d="M110 0V96M0 48H220" stroke="#fff" stroke-width="5"/></svg>';
-  h("div",{class:"bu-heure"},deco);h("div",{class:"bu-date"},deco);
+  const mur=h("div",{class:"bu-mur"},box);qgConstruire(h("div",{class:"bu-qg"},mur));h("div",{class:"bu-score"},mur);h("div",{class:"bu-blanc"},mur);
   h("div",{class:"bu-led",role:"status"},box);const sol=h("div",{class:"bu-sol"},box);
   BU_POSTES.forEach(([nom,z,picto,zone],i)=>{const b=h("button",{type:"button",class:"poste z-"+z,"data-nom":nom},sol);
     const zo=h("div",{class:"zone"},b);if(zone)h("b",{},zo,zone);const bu=h("div",{class:"bulle"},b);h("span",{},bu);const pv=h("div",{class:"pv"},b);
     pv.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21C5 16 2 12.5 2 8.8 2 6 4.2 4 6.8 4c1.8 0 3.3.9 4.2 2.3h2C13.9 4.9 15.4 4 17.2 4 19.8 4 22 6 22 8.8c0 3.7-3 7.2-10 12.2z"/></svg><div class="jg"><i></i></div><b></b>';
-    const sv=buPerso(i,nom==="Jérôme"?"#D41C86":(COUL[nom]||"#5A5480"));sv.querySelector(".picto").textContent=picto;b.append(sv);
+    const sv=buPerso(i,nom==="Jérôme"?"#D41C86":(COUL[nom]||"#5A5480"),nom);sv.querySelector(".picto").textContent=picto;b.append(sv);
     const pl=h("div",{class:"plaque"},b);h("i",{},pl);h("span",{},pl,nom==="Jérôme"?"Toi, Jérôme":nom);h("div",{class:"pmeta"},b);
-    b.onclick=()=>{if(nom==="Jérôme"){if(typeof onglet==="function")onglet("atoi");return;}BU.sel=BU.sel===nom?null:nom;buFiche();if(BU.sel)box.querySelector(".bu-fiche").scrollIntoView({behavior:"smooth",block:"nearest"});};});
+    b.onclick=()=>buChoisir(nom);});
   const fly=h("div",{class:"os-fly"},box);fly.innerHTML='<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true"><path d="M2 11 22 3 15 21 11 13Z" fill="#EE34A0"/><path d="M11 13 22 3" stroke="#fff" stroke-width="1.2"/></svg>';
   h("div",{class:"os-cap",role:"status"},box);h("div",{class:"bu-fiche",hidden:""},box);
   BU.root=R;BU.idx=0;if(BU.timer)clearInterval(BU.timer);BU.timer=setInterval(buVol,4200);setTimeout(buVol,500);}
-function buHorloge(){const R=BU.root;if(!R||!R.isConnected)return;const n=new Date(),hh=n.getHours();
-  R.querySelector(".bu-heure").textContent=n.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
-  R.querySelector(".bu-date").textContent=n.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-  const nuit=hh<7||hh>=19;R.querySelector(".ciel").setAttribute("fill",nuit?"#1a1447":"#8298FF");R.querySelector(".astre").setAttribute("fill",nuit?"#E7E3FA":"#FFE9A8");}
+function buChoisir(nom){const R=BU.root;if(!R)return;if(nom==="Jérôme"){if(typeof onglet==="function")onglet("atoi");return;}BU.sel=BU.sel===nom?null:nom;buFiche();if(BU.d)qgMaj(BU.d,R.querySelector(".bu-qg"));
+  if(BU.sel)R.querySelector(".bu-fiche").scrollIntoView({behavior:"smooth",block:"nearest"});}
+function buHorloge(){const R=BU.root;if(!R||!R.isConnected)return;const e=R.querySelector(".bu-led .heure");
+  if(e)e.textContent=new Date().toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});}
 function buVol(){const R=BU.root;buHorloge();if(!R||!R.isConnected)return;const box=R.querySelector(".bu"),fly=box.querySelector(".os-fly"),cap=box.querySelector(".os-cap");
   if(!box.offsetParent||!BU.vols.length)return;const m=BU.vols[BU.idx++%BU.vols.length];const lieu=n=>n==="Pilotage"?"Orchestrateur":n,p=n=>box.querySelector(`.poste[data-nom="${CSS.escape(lieu(n))}"]`);
   const de=p(m.de),a=p(m.a);if(!de||!a)return;box.querySelectorAll(".poste.vise").forEach(x=>x.classList.remove("vise"));a.classList.add("vise");
@@ -489,12 +485,12 @@ function buVol(){const R=BU.root;buHorloge();if(!R||!R.isConnected)return;const 
   const [x1,y1]=c(de),[x2,y2]=c(a);fly.style.transition="none";fly.style.opacity="1";fly.style.transform=`translate(${x1}px,${y1}px)`;void fly.offsetWidth;fly.style.transition="";
   requestAnimationFrame(()=>{fly.style.transform=`translate(${x2}px,${y2}px) rotate(${x2<x1?-150:20}deg)`;});setTimeout(()=>{fly.style.opacity="0";},1700);
   cap.replaceChildren();h("b",{},cap,`✉ ${m.de} → ${m.a}`);cap.append(` · ${({consigne:"consigne",transmission:"transmis",demande:"demande",alerte:"alerte",reponse:"réponse"})[m.type]||m.type} : ${m.sujet||""}`);
-  if(BU.vols.length>1)h("span",{style:"opacity:.75"},cap,` (${(BU.idx-1)%BU.vols.length+1}/${BU.vols.length})`);}
+  if(BU.vols.length>1)h("span",{style:"opacity:.75"},cap,` (${(BU.idx-1)%BU.vols.length+1}/${BU.vols.length})`);qgVol(box.querySelector(".bu-qg"),m);}
 function buFiche(){const R=BU.root,d=BU.d;if(!R||!d)return;const F=R.querySelector(".bu-fiche");R.querySelectorAll(".poste.sel").forEach(x=>x.classList.remove("sel"));
   const a=d.agents.find(x=>x.nom===BU.sel);if(!a){F.hidden=true;return;}F.hidden=false;F.replaceChildren();R.querySelector(`.poste[data-nom="${CSS.escape(a.nom)}"]`).classList.add("sel");
   const s=buVie(d,a.nom),t=h("div",{class:"tete"},F);h("h3",{},t,a.nom);chip(a.etat,t);
   if(s)h("span",{class:"chip",style:`color:#fff;background:${BU_SVC[s.etat]}`},t,`${BU_SV[s.etat]} · vie ${s.vie} %`);
-  const fe=h("button",{type:"button",class:"btn sm",style:"margin-left:auto"},t,"Fermer");fe.onclick=()=>{BU.sel=null;buFiche();};
+  const fe=h("button",{type:"button",class:"btn sm",style:"margin-left:auto"},t,"Fermer");fe.onclick=()=>{BU.sel=null;buFiche();qgMaj(BU.d,R.querySelector(".bu-qg"));};
   let c=h("div",{},F);h("h4",{},c,"En ce moment");h("p",{},c,buTexte(a));if(a.progression)h("p",{class:"muted"},c,"Progression : "+a.progression);
   h("p",{class:"muted"},c,`Dernière déclaration : ${a.maj?osIlya(a.maj):"jamais"} · ${a.boite||0} message(s) en boîte`);
   if(a.plan){h("h4",{style:"margin-top:10px"},c,"Méthode imposée par l'Orchestrateur");h("p",{style:"font-weight:700;color:var(--accent)"},c,`Plan ${a.plan.code} sur ${a.plan.nb_plans} · ${a.plan.nom}`);h("p",{},c,a.plan.consigne);h("p",{class:"muted"},c,"Pourquoi : "+(a.plan.motif||"—"));}
@@ -502,6 +498,8 @@ function buFiche(){const R=BU.root,d=BU.d;if(!R||!d)return;const F=R.querySelect
     h("p",{},c,`Jalon personnel : ${s.valeur} / ${s.cible} ${s.unite}, avant le ${new Date(s.jalon).toLocaleDateString("fr-FR",{day:"numeric",month:"long"})} (${s.jours>=0?"J-"+s.jours:"dépassé de "+(-s.jours)+" j"}).`);
     h("p",{class:"muted"},c,`Résultat ${s.avance} % · temps écoulé ${s.temps} %${s.membres?" · jalon commun à la cellule appels d'offres":""}`);
     h("h4",{style:"margin-top:10px"},c,"Ce qui le fait vivre");h("p",{},c,s.vit||"");h("h4",{},c,"Faute éliminatoire");h("p",{},c,s.faute||"");}
+  const lc=(d.lecons||[]).filter(l=>l.agent===a.nom||(l.portee==="tous"&&l.statut==="retenue")).slice(0,4);
+  if(lc.length){c=h("div",{},F);h("h4",{},c,`Ce qu'il a appris · ${a.lecons||0} leçon${(a.lecons||0)>1?"s":""} retenue${(a.lecons||0)>1?"s":""}`);const ul=h("ul",{},c);lc.forEach(l=>h("li",{},ul,`${l.lecon}${l.statut==="proposee"?" (à valider par l'Orchestrateur)":""}`));}
   c=h("div",{},F);h("h4",{},c,"Dernières actions");const u=h("ul",{},c);(a.historique||[]).slice(0,5).forEach(j=>h("li",{},u,`${(j.date||"").slice(5,16).replace("T"," ")} · ${j.action}`));if(!(a.historique||[]).length)h("li",{class:"muted"},u,"Aucune action enregistrée.");
   const ms=(d.echanges||[]).filter(m=>m.a===a.nom||m.de===a.nom).slice(0,5);h("h4",{style:"margin-top:10px"},c,"Courrier");const v=h("ul",{},c);ms.forEach(m=>h("li",{},v,`${m.de} → ${m.a} : ${m.sujet||""} (${m.statut})`));if(!ms.length)h("li",{class:"muted"},v,"Aucun message.");}
 function bureauUnique(d,R){
@@ -520,7 +518,8 @@ function bureauUnique(d,R){
   // bandeau en direct
   const tr=d.agents.filter(a=>a.etat==="travaille").length,j0=(d.journal||[])[0],L=box.querySelector(".bu-led");L.className="bu-led"+(tr?" on":"");
   const led=(tr?`EN DIRECT · ${tr} agent${tr>1?"s":""} au travail`:`AU REPOS · dernière routine ${osIlya((d.routine||{}).derniere)}`)+"|"+(j0?`${j0.agent} — ${j0.action} (${osIlya(j0.date)})`:"");
-  if(L.dataset.s!==led){L.dataset.s=led;L.replaceChildren();h("i",{},L);h("b",{},L,led.split("|")[0]);h("span",{},L,led.split("|")[1]);}
+  if(L.dataset.s!==led){L.dataset.s=led;L.replaceChildren();h("i",{},L);h("b",{},L,led.split("|")[0]);h("span",{},L,led.split("|")[1]);h("span",{class:"heure"},L);}
+  qgMaj(d,box.querySelector(".bu-qg"));
   // postes
   const A=Object.fromEntries(d.agents.map(a=>[a.nom,a]));
   box.querySelectorAll(".poste").forEach(b=>{const nom=b.dataset.nom,z=[...b.classList].find(c=>c.startsWith("z-")),garde=["poste",z].concat(["sel","vise"].filter(c=>b.classList.contains(c)));
@@ -529,12 +528,125 @@ function bureauUnique(d,R){
       pv.querySelector("i").style.width=Math.round(100*g.signes/g.cible)+"%";pv.querySelector("b").textContent=`${g.signes}/${g.cible}`;meta.textContent="Appeler, rencontrer, signer";b.setAttribute("aria-label",`Ton bureau : ${n} décisions en attente`);}
     else{const a=A[nom];if(!a){b.hidden=true;return;}const s=buVie(d,nom),e=ETAT[a.etat]||ETAT.repos;t=buTexte(a);cls=["e-"+a.etat,"v-"+(s?s.etat:"vivant")];
       pv.querySelector("i").style.width=(s?s.vie:100)+"%";pv.querySelector("b").textContent=(s?s.vie:100)+" %";pv.title=s?`Vie ${s.vie} % · ${BU_SV[s.etat]} · ${s.valeur}/${s.cible} ${s.unite}`:"";
-      meta.replaceChildren();h("b",{},meta,e.t);if(a.plan)meta.append(" · plan "+a.plan.code);if(a.boite){meta.append(" · ");h("em",{},meta,"✉ "+a.boite);}
+      meta.replaceChildren();h("b",{},meta,e.t);if(a.plan)meta.append(" · plan "+a.plan.code);if(a.boite){meta.append(" · ");h("em",{},meta,"✉ "+a.boite);}if(a.lecons)meta.append(" · 🎓 "+a.lecons);
       b.setAttribute("aria-label",`${nom}, ${e.t}, vie ${s?s.vie:100} %`);}
     b.className=garde.concat(cls).join(" ");if(txt.textContent!==t){txt.textContent=t;bulle.title=t;bulle.classList.remove("neuf");void bulle.offsetWidth;bulle.classList.add("neuf");}});
   const lieu=n=>n==="Pilotage"?"Orchestrateur":n;BU.vols=(d.echanges||[]).filter(m=>m.statut==="ouvert"&&lieu(m.de)!==lieu(m.a));
   if(!BU.vols.length)box.querySelector(".os-cap").textContent="Courrier interne : aucun message en cours entre les agents.";
   buHorloge();if(BU.sel)buFiche();}
+</script>
+<style>
+/* Quartier général vu d'en haut (isométrique) : six salles de couleur, un bureau par agent, murs de brique et verrières */
+.bu-qg{position:relative;grid-row:span 2;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#B9A8F2 0%,#D9B8EE 55%,#F6C3DC 100%);box-shadow:0 5px 0 rgba(0,0,0,.14);min-width:0}
+.bu-qg .titre{position:absolute;left:14px;top:10px;font:700 12px/1.2 var(--body);letter-spacing:.1em;text-transform:uppercase;color:#20185D;background:rgba(255,255,255,.8);border-radius:999px;padding:4px 10px;z-index:1}
+.bu-qg .cadre{overflow-x:auto;overflow-y:hidden}.bu-qg svg{display:block;width:100%;min-width:600px;height:auto}
+.ia{cursor:pointer}.ia .qh{fill:#9AA5B5;opacity:.55}.ia.e-travaille .qh{fill:#5B3FD6;opacity:.8;animation:qpulse 1.3s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.ia.e-attente .qh{fill:#F2A93B;opacity:.85}.ia.e-bloque .qh{fill:#E5484D;opacity:.9;animation:clign .8s steps(2) infinite}
+.ia .qe{fill:#3a3566}.ia.e-travaille .qe{fill:#EE34A0;animation:clign 1.1s steps(2) infinite}.ia.e-attente .qe{fill:#F2A93B}.ia.e-bloque .qe{fill:#E5484D}
+.ia.e-travaille .qperso{animation:tape .35s ease-in-out infinite alternate}
+.ia .qv{fill:var(--c)}.ia.sel .qpill{stroke:#EE34A0;stroke-width:2}.ia:hover .qpill{stroke:#5B3FD6;stroke-width:1.5}
+.ia.v-agonie .qperso,.ia.v-mort .qperso{filter:grayscale(1)}
+.qg-pli{transition:transform 1.6s cubic-bezier(.45,.05,.3,1),opacity .3s;opacity:0;pointer-events:none}
+@keyframes qpulse{50%{transform:scale(1.35);opacity:.35}}
+.bu-mur{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)!important}.bu-deco{display:none!important}
+.bu-led .heure{margin-left:auto;white-space:nowrap;color:#BDB5EA}
+@media (max-width:860px){.bu-mur{grid-template-columns:minmax(0,1fr)!important}.bu-qg{grid-row:auto}}
+/* écran propre à chaque rôle */
+.wk .role{opacity:.3}.e-travaille .wk .role{opacity:1}.e-attente .wk .role,.e-bloque .wk .role{opacity:.18}
+.wk .a1,.wk .a2,.wk .a3{animation:clign 1.5s steps(2) infinite}.wk .a2{animation-delay:.5s}.wk .a3{animation-delay:1s}
+.wk .rot{animation:tourne 2.4s linear infinite;transform-origin:36px 21px}.wk .bar{animation:barre 1.6s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:bottom}
+.wk .gl{animation:glisse 2.6s ease-in-out infinite alternate}
+.wk .a1,.wk .a2,.wk .a3,.wk .rot,.wk .bar,.wk .gl,.wk .ln{animation-play-state:paused}
+.e-travaille .wk .a1,.e-travaille .wk .a2,.e-travaille .wk .a3,.e-travaille .wk .rot,.e-travaille .wk .bar,.e-travaille .wk .gl,.e-travaille .wk .ln{animation-play-state:running}
+@keyframes tourne{to{transform:rotate(360deg)}}@keyframes barre{from{transform:scaleY(.35)}to{transform:scaleY(1)}}@keyframes glisse{from{transform:translate(0,0)}to{transform:translate(26px,10px)}}
+</style>
+<script>
+/* ---- un écran par rôle (zone de 72 × 42, origine en haut à gauche de l'écran) ---- */
+const BU_ECRAN={
+ "Orchestrateur":`<rect x="4" y="3" width="19" height="4" rx="1" fill="#AF8BF1"/><rect x="27" y="3" width="19" height="4" rx="1" fill="#EE34A0"/><rect x="50" y="3" width="19" height="4" rx="1" fill="#3DD68C"/>
+  <g fill="#cfc9ee"><rect x="4" y="10" width="19" height="7" rx="1.5"/><rect x="4" y="20" width="19" height="7" rx="1.5"/><rect x="27" y="10" width="19" height="7" rx="1.5"/><rect class="a2" x="27" y="20" width="19" height="7" rx="1.5" fill="#FFB3DD"/><rect class="a1" x="50" y="10" width="19" height="7" rx="1.5" fill="#9FE8C4"/><rect x="4" y="30" width="19" height="7" rx="1.5"/></g>`,
+ "Veille Sources":`<g fill="none" stroke="#3DD68C" stroke-width="1.2"><circle cx="36" cy="21" r="17"/><circle cx="36" cy="21" r="10"/><circle cx="36" cy="21" r="4"/><path d="M36 2V40M17 21H55" opacity=".5"/></g>
+  <path class="rot" d="M36 21L36 4A17 17 0 0 1 50 11Z" fill="#3DD68C" opacity=".55"/><circle class="a1" cx="46" cy="13" r="2.2" fill="#fff"/><circle class="a2" cx="27" cy="29" r="2.2" fill="#fff"/><circle class="a3" cx="24" cy="12" r="1.8" fill="#FFE9A8"/>`,
+ "Veille Comptes":`<path d="M2 30 Q14 22 22 27 T42 22 T70 28 V40 H2Z" fill="#8298FF" opacity=".55"/><path d="M2 12 Q20 6 34 12 T70 9" fill="none" stroke="#8298FF" stroke-width="1" opacity=".6"/>
+  <g fill="#EE34A0"><path class="a1" d="M16 22l-3.5-7a4 4 0 1 1 7 0Z"/><path class="a2" d="M40 18l-3.5-7a4 4 0 1 1 7 0Z"/><path class="a3" d="M58 24l-3.5-7a4 4 0 1 1 7 0Z"/></g><g fill="#fff"><circle cx="16" cy="13.5" r="1.4"/><circle cx="40" cy="9.5" r="1.4"/><circle cx="58" cy="15.5" r="1.4"/></g>`,
+ "Veille Besoins":`<g fill="#cfc9ee"><rect x="4" y="4" width="46" height="9" rx="2"/><rect x="4" y="16" width="46" height="9" rx="2"/><rect x="4" y="28" width="46" height="9" rx="2"/></g><rect class="a1" x="4" y="16" width="46" height="9" rx="2" fill="#FFB3DD"/>
+  <g fill="#20185D"><rect x="7" y="6.5" width="5" height="4" rx="1"/><rect x="15" y="7.5" width="28" height="2" rx="1"/><rect x="7" y="18.5" width="5" height="4" rx="1"/><rect x="15" y="19.5" width="22" height="2" rx="1"/><rect x="7" y="30.5" width="5" height="4" rx="1"/><rect x="15" y="31.5" width="30" height="2" rx="1"/></g>
+  <g fill="none" stroke="#EE34A0" stroke-width="1.6"><circle cx="60" cy="20" r="7"/><circle cx="60" cy="20" r="2.5"/><path d="M60 10v5M60 25v5M50 20h5M65 20h5"/></g>`,
+ "Ciblage Contact":`<g stroke="#AF8BF1" stroke-width="1.2" fill="none"><path d="M36 11V17M14 23V17H58V23M36 17V23"/></g><rect x="28" y="3" width="16" height="8" rx="2" fill="#AF8BF1"/>
+  <rect x="6" y="23" width="16" height="8" rx="2" fill="#cfc9ee"/><rect class="a1" x="28" y="23" width="16" height="8" rx="2" fill="#EE34A0"/><rect x="50" y="23" width="16" height="8" rx="2" fill="#cfc9ee"/>
+  <path class="a2" d="M31 34c2 4 5 6 9 6l1.5-2.5-3-1.5-1 1c-1.2-.4-2.3-1.6-2.8-2.8l1-1-1.5-3Z" fill="#3DD68C"/>`,
+ "Rédaction":`<rect x="4" y="4" width="20" height="13" rx="2" fill="none" stroke="#FFB3DD" stroke-width="1.4"/><path d="M4 5l10 7 10-7" fill="none" stroke="#FFB3DD" stroke-width="1.4"/>
+  <rect class="ln" x="28" y="5" width="38" height="3" rx="1.5" fill="#fff"/><rect class="ln" x="28" y="11" width="30" height="3" rx="1.5" fill="#cfc9ee"/><rect class="ln" x="4" y="22" width="62" height="3" rx="1.5" fill="#cfc9ee"/><rect class="ln" x="4" y="28" width="52" height="3" rx="1.5" fill="#cfc9ee"/><rect class="a1" x="4" y="34" width="2" height="5" fill="#EE34A0"/>`,
+ "Préparation Affaires":`<g fill="none" stroke="#cfc9ee" stroke-width="1.3"><rect x="5" y="4" width="7" height="7" rx="1.5"/><rect x="5" y="15" width="7" height="7" rx="1.5"/><rect x="5" y="26" width="7" height="7" rx="1.5"/></g>
+  <g fill="#cfc9ee"><rect x="16" y="6" width="44" height="3" rx="1.5"/><rect x="16" y="17" width="36" height="3" rx="1.5"/><rect x="16" y="28" width="48" height="3" rx="1.5"/></g>
+  <g fill="none" stroke="#3DD68C" stroke-width="2" stroke-linecap="round"><path d="M6.5 7.5l2 2 3-4"/><path class="a1" d="M6.5 18.5l2 2 3-4"/><path class="a2" d="M6.5 29.5l2 2 3-4"/></g>`,
+ "Matching Vivier":`<rect x="3" y="6" width="24" height="30" rx="3" fill="#cfc9ee"/><circle cx="15" cy="15" r="5" fill="#8298FF"/><rect x="8" y="24" width="14" height="2.5" rx="1" fill="#20185D"/><rect x="8" y="29" width="10" height="2.5" rx="1" fill="#20185D"/>
+  <rect x="45" y="6" width="24" height="30" rx="3" fill="#cfc9ee"/><rect x="50" y="11" width="14" height="8" rx="1.5" fill="#EF765B"/><rect x="50" y="24" width="14" height="2.5" rx="1" fill="#20185D"/><rect x="50" y="29" width="10" height="2.5" rx="1" fill="#20185D"/>
+  <circle class="a1" cx="36" cy="21" r="7" fill="#EE34A0"/><path d="M32.5 21l2.5 2.5 4.5-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`,
+ "Veille AO":`<rect x="6" y="3" width="30" height="36" rx="2" fill="#cfc9ee"/><g fill="#20185D"><rect x="10" y="8" width="22" height="2.5" rx="1"/><rect x="10" y="14" width="18" height="2.5" rx="1"/><rect x="10" y="20" width="22" height="2.5" rx="1"/><rect x="10" y="26" width="14" height="2.5" rx="1"/></g>
+  <g class="gl" fill="none" stroke="#EE34A0" stroke-width="2.2" stroke-linecap="round"><circle cx="22" cy="12" r="7" fill="rgba(238,52,160,.18)"/><path d="M27 17l6 6"/></g>`,
+ "AO Analyse":`<rect x="8" y="2" width="56" height="38" rx="2" fill="#f4efe6"/><rect class="a1" x="12" y="7" width="30" height="5" fill="#FFE066"/><rect class="a2" x="12" y="23" width="40" height="5" fill="#FFB3DD"/>
+  <g fill="#20185D"><rect x="12" y="8.5" width="46" height="2" rx="1"/><rect x="12" y="16.5" width="38" height="2" rx="1"/><rect x="12" y="24.5" width="46" height="2" rx="1"/><rect x="12" y="32.5" width="28" height="2" rx="1"/></g>`,
+ "AO Mémoire":`<path d="M36 5C28 2 14 2 5 5V38C14 35 28 35 36 38Z" fill="#f4efe6"/><path d="M36 5C44 2 58 2 67 5V38C58 35 44 35 36 38Z" fill="#e9e3d7"/>
+  <g fill="#20185D"><rect class="ln" x="9" y="10" width="22" height="2" rx="1"/><rect class="ln" x="9" y="16" width="20" height="2" rx="1"/><rect class="ln" x="9" y="22" width="22" height="2" rx="1"/><rect class="ln" x="41" y="10" width="20" height="2" rx="1"/><rect x="41" y="16" width="22" height="2" rx="1" opacity=".4"/><rect x="41" y="22" width="16" height="2" rx="1" opacity=".4"/></g>`,
+ "AO Chiffrage":`<path d="M5 38H68" stroke="#cfc9ee" stroke-width="1.2"/><rect class="bar" x="9" y="22" width="9" height="16" rx="1.5" fill="#8298FF"/><rect class="bar" x="22" y="14" width="9" height="24" rx="1.5" fill="#AF8BF1"/><rect class="bar" x="35" y="18" width="9" height="20" rx="1.5" fill="#EE34A0"/><rect class="bar" x="48" y="8" width="9" height="30" rx="1.5" fill="#3DD68C"/>
+  <text x="66" y="14" text-anchor="end" font-size="11" font-weight="800" fill="#FFE9A8">€</text>`,
+ "AO Admin":`<g fill="#F2A93B"><path d="M4 8h8l2 2h10v10H4Z"/><path d="M28 8h8l2 2h10v10H28Z"/><path d="M52 8h8l2 2h8v10H52Z" opacity=".5"/><path d="M4 26h8l2 2h10v10H4Z"/><path d="M28 26h8l2 2h10v10H28Z" opacity=".5"/><path d="M52 26h8l2 2h8v10H52Z" opacity=".5"/></g>
+  <g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M10 15l2.5 2.5 4.5-5"/><path class="a1" d="M34 15l2.5 2.5 4.5-5"/><path class="a2" d="M10 33l2.5 2.5 4.5-5"/></g>`,
+ "AO Relecture":`<rect x="5" y="2" width="40" height="38" rx="2" fill="#f4efe6"/><g fill="#20185D"><rect x="9" y="8" width="32" height="2" rx="1"/><rect x="9" y="15" width="26" height="2" rx="1"/><rect x="9" y="22" width="32" height="2" rx="1"/><rect x="9" y="29" width="20" height="2" rx="1"/></g>
+  <path class="a1" d="M8 16h29" stroke="#E5484D" stroke-width="1.6"/><circle class="a2" cx="38" cy="29.5" r="3.5" fill="none" stroke="#E5484D" stroke-width="1.4"/>
+  <circle cx="58" cy="21" r="10" fill="none" stroke="#3DD68C" stroke-width="2"/><text x="58" y="25.5" text-anchor="middle" font-size="12" font-weight="800" fill="#3DD68C">A</text>`,
+ "Jérôme":`<rect x="6" y="5" width="34" height="32" rx="3" fill="#f4efe6"/><rect x="6" y="5" width="34" height="8" rx="3" fill="#EE34A0"/><g fill="#cfc9ee"><rect x="10" y="17" width="6" height="5" rx="1"/><rect x="20" y="17" width="6" height="5" rx="1"/><rect x="30" y="17" width="6" height="5" rx="1"/><rect x="10" y="26" width="6" height="5" rx="1"/><rect x="30" y="26" width="6" height="5" rx="1"/></g><rect class="a1" x="20" y="26" width="6" height="5" rx="1" fill="#EE34A0"/>
+  <path class="a2" d="M50 12c2 9 7 15 15 18l3-4.5-5.5-3-2 2c-2.4-1-4.6-3.6-5.4-6l2-2-3-5.5Z" fill="#3DD68C"/>`};
+function buEcran(nom){return `<g class="role" transform="translate(116,12)">${BU_ECRAN[nom]||""}</g>`;}
+
+/* ---- le quartier général isométrique ---- */
+const QG={TW:64,TH:32,OX:296,OY:78};
+const QG_Z=[["Direction",0,3,0,3,"#C9BEF7",1.5,2.7],["Toi",3,6,0,3,"#FFD9A8",4.5,2.7],["Chasse",6,10,0,3,"#BFD0FF",8.4,2.7],["Ciblage et préparation",0,4,3,6,"#DCC6FB",2,5.72],["Placement",0,4,6,8,"#FFC9B8",2.4,7.7],["Appels d'offres",4,10,3,8,"#FFC4E3",6,7.82]];
+const QG_P={"Orchestrateur":[1.4,1.3],"Jérôme":[4.5,1.3],"Veille Sources":[6.9,1.3],"Veille Comptes":[8.1,1.3],"Veille Besoins":[9.3,1.3],"Ciblage Contact":[0.9,4.4],"Rédaction":[2.1,4.4],"Préparation Affaires":[3.3,4.4],
+ "Matching Vivier":[1.0,7.0],"Veille AO":[5.3,4.3],"AO Analyse":[7.1,4.3],"AO Mémoire":[8.9,4.3],"AO Chiffrage":[5.3,6.5],"AO Admin":[7.1,6.5],"AO Relecture":[8.9,6.5]};
+const QG_INI={"Jérôme":"TOI"};
+function qP(x,y,z){return [QG.OX+(x-y)*QG.TW/2,QG.OY+(x+y)*QG.TH/2-(z||0)];}
+function qPts(a){return a.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");}
+function qBoite(x,y,w,d,hh,top,g,dr){const A=qP(x,y,hh),B=qP(x+w,y,hh),C=qP(x+w,y+d,hh),D=qP(x,y+d,hh),C0=qP(x+w,y+d),D0=qP(x,y+d),B0=qP(x+w,y);
+  return `<polygon points="${qPts([D,C,C0,D0])}" fill="${g}"/><polygon points="${qPts([B,C,C0,B0])}" fill="${dr}"/><polygon points="${qPts([A,B,C,D])}" fill="${top}"/>`;}
+function qgConstruire(C){
+  C.replaceChildren();h("div",{class:"titre"},C,"Le quartier général · en direct");const cadre=h("div",{class:"cadre"},C);let s="";
+  // nuages, île (herbe et terre), sol
+  s+=`<g fill="#fff" opacity=".75"><ellipse cx="80" cy="60" rx="34" ry="9"/><ellipse cx="104" cy="54" rx="20" ry="8"/><ellipse cx="590" cy="330" rx="30" ry="8"/><ellipse cx="566" cy="336" rx="18" ry="6"/><ellipse cx="60" cy="372" rx="26" ry="7"/></g>`;
+  s+=qBoite(-.35,-.35,10.7,8.7,-34,"#7BC47F","#8B5E3C","#6F4A2F").replace(/<polygon points="[^"]*" fill="#7BC47F"\/>/,"");
+  s+=`<polygon points="${qPts([qP(-.35,-.35),qP(10.35,-.35),qP(10.35,8.35),qP(-.35,8.35)])}" fill="#7BC47F"/>`;
+  s+=`<polygon points="${qPts([qP(-.35,8.35),qP(10.35,8.35),qP(10.35,8.35,-8),qP(-.35,8.35,-8)])}" fill="#5FA864"/><polygon points="${qPts([qP(10.35,-.35),qP(10.35,8.35),qP(10.35,8.35,-8),qP(10.35,-.35,-8)])}" fill="#4F9455"/>`;
+  s+=`<polygon points="${qPts([qP(0,0),qP(10,0),qP(10,8),qP(0,8)])}" fill="#E9D8B8"/>`;
+  for(const [n,x0,x1,y0,y1,c] of QG_Z)s+=`<polygon points="${qPts([qP(x0+.08,y0+.08),qP(x1-.08,y0+.08),qP(x1-.08,y1-.08),qP(x0+.08,y1-.08)])}" fill="${c}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>`;
+  // murs de brique et verrières (les deux murs du fond)
+  s+=`<polygon points="${qPts([qP(0,0),qP(10,0),qP(10,0,48),qP(0,0,48)])}" fill="#B5553C"/><polygon points="${qPts([qP(0,0),qP(0,8),qP(0,8,48),qP(0,0,48)])}" fill="#9A4631"/>`;
+  for(let i=0;i<10;i++)s+=`<polygon points="${qPts([qP(i+.18,0,12),qP(i+.82,0,12),qP(i+.82,0,40),qP(i+.18,0,40)])}" fill="#FFE9A8" stroke="#1b1b1b" stroke-width="1.8"/><path d="M${qP(i+.5,0,12).join(" ")}L${qP(i+.5,0,40).join(" ")}" stroke="#1b1b1b" stroke-width="1"/>`;
+  for(let j=0;j<8;j++)s+=`<polygon points="${qPts([qP(0,j+.18,12),qP(0,j+.82,12),qP(0,j+.82,40),qP(0,j+.18,40)])}" fill="#FFD98A" stroke="#1b1b1b" stroke-width="1.8"/><path d="M${qP(0,j+.5,12).join(" ")}L${qP(0,j+.5,40).join(" ")}" stroke="#1b1b1b" stroke-width="1"/>`;
+  // plantes et postes, du fond vers l'avant
+  const objs=[];for(const [x,y] of [[2.6,.5],[5.6,.5],[9.65,2.6],[3.6,7.6],[9.6,7.6],[4.45,3.45],[.4,2.6],[6.35,2.6],[9.6,5.4]]){const [X,Y]=qP(x,y,9);
+    objs.push([x+y,qBoite(x-.13,y-.13,.26,.26,8,"#C96A4A","#8E3F2C","#A34A33")+`<g fill="#3F9A55"><circle cx="${X}" cy="${Y-6}" r="7"/><circle cx="${X-6}" cy="${Y-1}" r="5.5" fill="#2F7F45"/><circle cx="${X+6}" cy="${Y-2}" r="5.5" fill="#56B36C"/></g>`]);}
+  Object.entries(QG_P).forEach(([nom,[cx,cy]],i)=>{const coul=nom==="Jérôme"?"#D41C86":(COUL[nom]==="#20185D"?"#5B4BC4":(COUL[nom]||"#5A5480")),[X,Y]=qP(cx,cy+.5),m1=qP(cx-.22,cy-.04,9),m2=qP(cx+.22,cy-.04,9);
+    const peau=["#f1c9a5","#e0ac87","#c68b62","#8d5a3b"][i%4],ini=QG_INI[nom]||INI[nom]||"?",lw=ini.length>2?30:24;
+    objs.push([cx+cy,`<g class="ia" data-nom="${nom}"><ellipse class="qh" cx="${X}" cy="${Y}" rx="14" ry="7"/>${qBoite(cx-.4,cy-.24,.8,.48,9,"#D2A679","#9A6B43","#B17F54")}
+     <polygon points="${qPts([m1,m2,[m2[0],m2[1]-17],[m1[0],m1[1]-17]])}" fill="#120e2e"/><polygon class="qe" points="${qPts([[m1[0]+1.6,m1[1]-1.2],[m2[0]-1.6,m2[1]-2.8],[m2[0]-1.6,m2[1]-15.4],[m1[0]+1.6,m1[1]-13.8]])}"/>
+     <g class="qperso"><ellipse cx="${X}" cy="${Y-9}" rx="7.5" ry="9.5" fill="${coul}"/><circle cx="${X}" cy="${Y-23}" r="6.2" fill="${peau}"/><path d="M${X-6.2} ${Y-24}a6.2 6.2 0 0 1 12.4 0q-6.2-4-12.4 0Z" fill="#2b2147"/></g>
+     <rect class="qpill" x="${X-lw/2}" y="${Y-47}" width="${lw}" height="12" rx="6" fill="#fff"/><text x="${X}" y="${Y-38.2}" text-anchor="middle" font-size="8" font-weight="800" fill="#20185D">${ini}</text>
+     <rect x="${X-12}" y="${Y-33.5}" width="24" height="3.2" rx="1.6" fill="rgba(32,24,93,.25)"/><rect class="qv" x="${X-12}" y="${Y-33.5}" width="24" height="3.2" rx="1.6"/><title>${nom}</title></g>`]);});
+  objs.sort((a,b)=>a[0]-b[0]);s+=objs.map(o=>o[1]).join("");
+  // noms des salles, par-dessus tout, à l'avant de chaque salle
+  for(const z of QG_Z){const n=z[0],[X,Y]=qP(z[6],z[7]),w=n.length*5.7+16;s+=`<g transform="translate(${(X-w/2).toFixed(1)},${(Y-7).toFixed(1)})"><rect width="${w}" height="14" rx="7" fill="#20185D" opacity=".88"/><text x="${w/2}" y="10.2" text-anchor="middle" font-size="8.6" font-weight="700" fill="#fff" letter-spacing=".5">${n.toUpperCase().replace("'","’")}</text></g>`;}
+  s+=`<g class="qg-pli"><path d="M-9 0 9 -6 3 8 0 2Z" fill="#EE34A0" stroke="#fff" stroke-width="1"/></g>`;
+  cadre.innerHTML=`<svg viewBox="0 0 660 424" role="img" aria-label="Quartier général : six salles, un bureau par agent">${s}</svg>`;
+  cadre.querySelectorAll(".ia").forEach(g=>{g.addEventListener("click",()=>buChoisir(g.dataset.nom));});}
+function qgMaj(d,C){const A=Object.fromEntries(d.agents.map(a=>[a.nom,a]));
+  C.querySelectorAll(".ia").forEach(g=>{const nom=g.dataset.nom;let e="repos",v="moi",vie=100;
+    if(nom==="Jérôme"){const n=(d.attentes||[]).reduce((s,x)=>s+x.nb,0);e=n?"attente":"repos";vie=Math.round(100*((d.agence||{}).signes||0)/6);}
+    else{const a=A[nom],s=buVie(d,nom);if(!a){g.style.display="none";return;}e=a.etat;v=s?s.etat:"vivant";vie=s?s.vie:100;}
+    g.setAttribute("class",`ia e-${e} v-${v}${BU.sel===nom?" sel":""}`);g.querySelector(".qv").setAttribute("width",(24*vie/100).toFixed(1));});}
+function qgVol(C,m){const lieu=n=>n==="Pilotage"?"Orchestrateur":n,a=QG_P[lieu(m.de)],b=QG_P[lieu(m.a)],p=C.querySelector(".qg-pli");if(!a||!b||!p)return;
+  const [x1,y1]=qP(a[0],a[1]+.5,30),[x2,y2]=qP(b[0],b[1]+.5,30);p.style.transition="none";p.style.opacity="1";p.style.transform=`translate(${x1}px,${y1}px)`;p.getBoundingClientRect();p.style.transition="";
+  requestAnimationFrame(()=>{p.style.transform=`translate(${x2}px,${y2}px)`;});setTimeout(()=>{p.style.opacity="0";},1700);}
 </script>
 <!--/OPENSPACE-->
 
