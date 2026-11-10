@@ -638,15 +638,72 @@ function qgConstruire(C){
   for(const z of QG_Z){const n=z[0],[X,Y]=qP(z[6],z[7]),w=n.length*5.7+16;s+=`<g transform="translate(${(X-w/2).toFixed(1)},${(Y-7).toFixed(1)})"><rect width="${w}" height="14" rx="7" fill="#20185D" opacity=".88"/><text x="${w/2}" y="10.2" text-anchor="middle" font-size="8.6" font-weight="700" fill="#fff" letter-spacing=".5">${n.toUpperCase().replace("'","’")}</text></g>`;}
   s+=`<g class="qg-pli"><path d="M-9 0 9 -6 3 8 0 2Z" fill="#EE34A0" stroke="#fff" stroke-width="1"/></g>`;
   cadre.innerHTML=`<svg viewBox="0 0 660 424" role="img" aria-label="Quartier général : six salles, un bureau par agent">${s}</svg>`;
-  cadre.querySelectorAll(".ia").forEach(g=>{g.addEventListener("click",()=>buChoisir(g.dataset.nom));});}
-function qgMaj(d,C){const A=Object.fromEntries(d.agents.map(a=>[a.nom,a]));
+  cadre.querySelectorAll(".ia").forEach(g=>{g.addEventListener("click",()=>buChoisir(g.dataset.nom));});
+  if(typeof loftConstruire==="function")loftConstruire(C);}
+function qgMaj(d,C){if(typeof loftMaj==="function")loftMaj(d,C);const A=Object.fromEntries(d.agents.map(a=>[a.nom,a]));
   C.querySelectorAll(".ia").forEach(g=>{const nom=g.dataset.nom;let e="repos",v="moi",vie=100;
     if(nom==="Jérôme"){const n=(d.attentes||[]).reduce((s,x)=>s+x.nb,0);e=n?"attente":"repos";vie=Math.round(100*((d.agence||{}).signes||0)/6);}
     else{const a=A[nom],s=buVie(d,nom);if(!a){g.style.display="none";return;}e=a.etat;v=s?s.etat:"vivant";vie=s?s.vie:100;}
     g.setAttribute("class",`ia e-${e} v-${v}${BU.sel===nom?" sel":""}`);g.querySelector(".qv").setAttribute("width",(24*vie/100).toFixed(1));});}
-function qgVol(C,m){const lieu=n=>n==="Pilotage"?"Orchestrateur":n,a=QG_P[lieu(m.de)],b=QG_P[lieu(m.a)],p=C.querySelector(".qg-pli");if(!a||!b||!p)return;
+function qgVol(C,m){if(typeof loftVol==="function")loftVol(C,m);const lieu=n=>n==="Pilotage"?"Orchestrateur":n,a=QG_P[lieu(m.de)],b=QG_P[lieu(m.a)],p=C.querySelector(".qg-pli");if(!a||!b||!p)return;
   const [x1,y1]=qP(a[0],a[1]+.5,30),[x2,y2]=qP(b[0],b[1]+.5,30);p.style.transition="none";p.style.opacity="1";p.style.transform=`translate(${x1}px,${y1}px)`;p.getBoundingClientRect();p.style.transition="";
   requestAnimationFrame(()=>{p.style.transform=`translate(${x2}px,${y2}px)`;});setTimeout(()=>{p.style.opacity="0";},1700);}
+</script>
+<style>
+[hidden]{display:none!important}
+/* Le loft : la photo de l'open space (decor/loft.webp) avec les agents en direct sur leurs sièges */
+.bu-qg .vues{position:absolute;right:12px;top:8px;z-index:3;display:flex;border-radius:999px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.bu-qg .vues button{border:0;background:rgba(255,255,255,.9);color:#20185D;font:600 12px/1 var(--body);padding:7px 12px;cursor:pointer;min-height:30px}
+.bu-qg .vues button.on{background:#20185D;color:#fff}
+.loft{overflow-x:auto;overflow-y:hidden}.loft .scene{position:relative;min-width:680px;container-type:inline-size;line-height:0}
+.loft img{display:block;width:100%;height:auto}
+.lm{position:absolute;transform:translate(-50%,-50%);border:0;background:none;padding:0;margin:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1;z-index:1}
+.lm:hover,.lm:focus-visible,.lm.sel{z-index:4}.lm:focus-visible{outline:0}
+.lm .lav{width:max(24px,3.3cqw);height:max(24px,3.3cqw);border-radius:50%;background:var(--k);color:#fff;font:800 max(9px,1.05cqw)/1 var(--body);display:grid;place-items:center;
+ border:2px solid #fff;box-shadow:0 0 0 3px var(--d),0 3px 9px rgba(0,0,0,.6)}
+.lm.e-repos{--d:#B8C0CC}.lm.e-travaille{--d:#7C5CFF}.lm.e-attente{--d:#F2A93B}.lm.e-bloque{--d:#FF5A4D}
+.lm.e-travaille .lav{animation:lpulse 1.3s ease-in-out infinite}.lm.e-bloque .lav{animation:lpulse .8s ease-in-out infinite}
+.lm.sel .lav,.lm:focus-visible .lav{border-color:#EE34A0}
+@keyframes lpulse{50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--d) 40%,transparent),0 3px 9px rgba(0,0,0,.6)}}
+.lm .lv{width:max(28px,3.8cqw);height:5px;border-radius:3px;background:rgba(10,6,30,.7);overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.55)}.lm .lv i{display:block;height:5px;background:var(--c2)}
+.lm.v-vivant{--c2:#3DD68C}.lm.v-menacé{--c2:#F2A93B}.lm.v-critique,.lm.v-agonie{--c2:#FF5A4D}.lm.v-mort{--c2:#8a8a96}.lm.v-moi{--c2:#EE34A0}
+.lm.v-agonie .lav,.lm.v-mort .lav{filter:grayscale(1)}
+.lm .lb{position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);width:max(140px,18cqw);background:#fff;color:#20185D;font:500 11.5px/1.3 var(--body);
+ padding:6px 8px;border-radius:9px;box-shadow:0 4px 12px rgba(0,0,0,.45);text-align:left;display:none}
+.lm .lb b{display:block;font-weight:700}.lm .lb span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lm.e-travaille .lb,.lm.e-attente .lb,.lm.e-bloque .lb,.lm:hover .lb,.lm:focus-visible .lb,.lm.sel .lb{display:block}
+.lm.e-attente .lb{background:#FFF3DF}.lm.e-bloque .lb{background:#FFE7E4}
+.lscore{position:absolute;left:57.25%;top:17.3%;transform:translate(-50%,-50%);font:600 max(13px,2.55cqw)/1 var(--display);color:#fff;letter-spacing:.06em;white-space:nowrap;
+ padding:.25em .9em;background:radial-gradient(closest-side,#2a1a4c 72%,rgba(42,26,76,0));pointer-events:none}
+.lpli{position:absolute;left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;pointer-events:none;z-index:5;opacity:0;transition:left 1.6s cubic-bezier(.45,.05,.3,1),top 1.6s cubic-bezier(.45,.05,.3,1),opacity .3s;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
+@media (prefers-reduced-motion:reduce){.lm .lav{animation:none!important}.lpli{display:none}}
+</style>
+<script>
+/* position de chaque siège sur la photo, en % de la largeur et de la hauteur de l'image */
+const LOFT_P={"Ciblage Contact":[33.1,36],"Rédaction":[39.2,36],"Préparation Affaires":[45.2,36],"Veille Sources":[23.6,54.5],"Veille Comptes":[33.3,54.5],"Veille Besoins":[42.6,54.5],"Jérôme":[13.5,77],
+ "Veille AO":[72.2,24.5],"AO Analyse":[79.2,24.5],"AO Chiffrage":[86.7,24.5],"AO Mémoire":[73.7,40.5],"AO Relecture":[81.5,40.5],"AO Admin":[89.4,40.5],"Matching Vivier":[82.2,56.5],"Orchestrateur":[83.4,85]};
+function loftConstruire(C){
+  const iso=C.querySelector(".cadre");const vues=h("div",{class:"vues",role:"group","aria-label":"Vue du bureau"},C);
+  const bL=h("button",{type:"button",class:"on"},vues,"Loft"),bM=h("button",{type:"button"},vues,"Maquette");
+  const loft=h("div",{class:"loft"});C.insertBefore(loft,iso);const sc=h("div",{class:"scene"},loft);
+  const voir=l=>{loft.hidden=!l;iso.hidden=l;bL.classList.toggle("on",l);bM.classList.toggle("on",!l);};bL.onclick=()=>voir(true);bM.onclick=()=>voir(false);
+  const img=h("img",{src:"decor/loft.webp",alt:"L'open space de l'agence : un loft industriel en brique, six îlots de bureaux en bois, des plantes, et le tableau 0 / 6 au mur",width:"1672",height:"941"},sc);
+  img.onerror=()=>{voir(false);vues.remove();loft.remove();};
+  h("div",{class:"lscore","aria-hidden":"true"},sc);
+  for(const [nom,[x,y]] of Object.entries(LOFT_P)){const coul=nom==="Jérôme"?"#D41C86":(COUL[nom]==="#20185D"?"#5B4BC4":(COUL[nom]||"#5A5480"));
+    const b=h("button",{type:"button",class:"lm","data-nom":nom,style:`left:${x}%;top:${y}%;--k:${coul}`},sc);const lb=h("div",{class:"lb"},b);h("b",{},lb,nom==="Jérôme"?"Toi, Jérôme":nom);h("span",{},lb);
+    h("span",{class:"lav"},b,nom==="Jérôme"?"TOI":(INI[nom]||"?"));const lv=h("span",{class:"lv"},b);h("i",{},lv);b.onclick=()=>buChoisir(nom);}
+  const pli=h("div",{class:"lpli"},sc);pli.innerHTML='<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M2 11 22 3 15 21 11 13Z" fill="#EE34A0" stroke="#fff" stroke-width="1.2"/></svg>';
+  voir(true);}
+function loftMaj(d,C){const sc=C.querySelector(".loft .scene");if(!sc)return;const A=Object.fromEntries(d.agents.map(a=>[a.nom,a])),g=d.agence||{signes:0,cible:6};
+  sc.querySelector(".lscore").textContent=`${g.signes} / ${g.cible||6}`;
+  sc.querySelectorAll(".lm").forEach(b=>{const nom=b.dataset.nom;let e="repos",v="moi",vie=100,t="";
+    if(nom==="Jérôme"){const n=(d.attentes||[]).reduce((s,x)=>s+x.nb,0);e=n?"attente":"repos";vie=Math.round(100*(g.signes||0)/6);t=n?`${n} décision${n>1?"s":""} t'attendent`:"Rien en attente : au téléphone !";}
+    else{const a=A[nom],s=buVie(d,nom);if(!a){b.hidden=true;return;}e=a.etat;v=s?s.etat:"vivant";vie=s?s.vie:100;t=buTexte(a);b.setAttribute("aria-label",`${nom}, ${(ETAT[e]||ETAT.repos).t}, vie ${vie} %`);}
+    b.className=`lm e-${e} v-${v}${BU.sel===nom?" sel":""}`;b.querySelector(".lv i").style.width=Math.max(4,vie)+"%";const sp=b.querySelector(".lb span");if(sp.textContent!==t)sp.textContent=t;});}
+function loftVol(C,m){const sc=C.querySelector(".loft .scene"),lieu=n=>n==="Pilotage"?"Orchestrateur":n;if(!sc||sc.parentNode.hidden)return;const a=LOFT_P[lieu(m.de)],b=LOFT_P[lieu(m.a)],p=sc.querySelector(".lpli");if(!a||!b)return;
+  p.style.transition="none";p.style.opacity="1";p.style.left=a[0]+"%";p.style.top=(a[1]-6)+"%";void p.offsetWidth;p.style.transition="";
+  requestAnimationFrame(()=>{p.style.left=b[0]+"%";p.style.top=(b[1]-6)+"%";});setTimeout(()=>{p.style.opacity="0";},1700);}
 </script>
 <!--/OPENSPACE-->
 
