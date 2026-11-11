@@ -108,7 +108,7 @@ nav button{border-radius:999px}nav button.on{background:var(--pink-btn);color:#f
   <div class="brand"><b>yevo</b><span>Sud-Est</span></div>
   <nav id="nav" aria-label="Navigation principale">
     <button data-t="atoi" class="on">À toi de jouer<span class="badge" id="nb-att">…</span></button>
-    <button data-t="profils">Profils</button>
+    <button data-t="profils">Profils</button><button data-t="positionnements">Positionnements</button>
     <button data-t="survie">Survie</button>
     <button data-t="bureau">Agents</button>
     <button data-t="pilotage">Pilotage</button>
@@ -121,7 +121,7 @@ nav button{border-radius:999px}nav button.on{background:var(--pink-btn);color:#f
 <main class="in">
   <section class="tab on" id="t-atoi"><div class="card muted">Chargement des données…</div></section>
   <section class="tab" id="t-bureau"><div class="row" id="objectif"></div><div id="v-os"></div><h1 style="margin:0;font-size:22px">La chaîne, du besoin à la signature</h1><div id="routine"></div><div class="chain" id="chain"></div><section class="card" id="echanges" aria-label="Échanges entre agents"></section></section>
-  <section class="tab" id="t-profils"></section><section class="tab" id="t-survie"></section>
+  <section class="tab" id="t-profils"></section><section class="tab" id="t-positionnements"></section><section class="tab" id="t-survie"></section>
   <section class="tab" id="t-pipeline"></section>
   <section class="tab" id="t-pilotage"></section>
   <section class="tab" id="t-ao"></section>
@@ -145,7 +145,7 @@ const STATIONS=[{k:"chasser",num:1,titre:"Chasser",sous:"Sources, comptes, besoi
  {k:"cibler",num:2,titre:"Cibler",sous:"Le manager qui porte le besoin",agents:["Ciblage Contact"],v:"st2"},
  {k:"preparer",num:3,titre:"Préparer",sous:"Résumés, accroches, mails, briefs",agents:["Rédaction","Préparation Affaires"],v:"st3"},
  {k:"placer",num:4,titre:"Placer",sous:"Le bon candidat, MC2 ≥ 100 €/j",agents:["Matching Vivier"],v:"st4"}];
-const LIB={valider:"Valider",ecarter:"Écarter",envoye:"Mail envoyé",rejeter:"Mail rejeté",go:"GO",no_go:"NO GO",valider_mc2:"MC2 validée",rdv:"RDV obtenu",rdv_physique:"RDV physique",rappeler:"Rappeler",pas_de_reponse:"Pas de réponse",refus:"Refus",stop:"STOP"};
+const LIB={valider:"Valider",ecarter:"Écarter",envoye:"Mail envoyé",rejeter:"Mail rejeté",go:"GO",no_go:"NO GO",valider_mc2:"MC2 validée",rdv:"RDV obtenu",rdv_physique:"RDV physique",rappeler:"Rappeler",pas_de_reponse:"Pas de réponse",refus:"Refus",stop:"STOP",presente:"CV présenté",entretien:"Entretien client",retenu:"Candidat retenu",refuse:"Refusé",rouvrir:"Rouvert"};
 let data=null,db=null,decisions=[],filtre="tout",ficheId=null;
 
 function h(tag,attrs={},parent,text){const e=document.createElement(tag);for(const k in attrs){if(k==="class")e.className=attrs[k];else if(k==="style")e.style.cssText=attrs[k];else e.setAttribute(k,attrs[k]);}if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e;}
@@ -316,7 +316,7 @@ function journal(){const u=document.getElementById("feed");u.replaceChildren();f
 /* ---------- démarrage ---------- */
 function tout(){if(!data)return;const tot=data.attentes.reduce((s,a)=>s+a.nb,0);document.getElementById("nb-att").textContent=tot;
   document.getElementById("stamp").textContent="Données du "+new Date(data.genere_le).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-  aToi();profilsTab(data);survieTab();bureau();pilotage();pipeline();ao();journal();if(ficheId)fiche();}
+  aToi();profilsTab(data);positionnementsTab(data);survieTab();bureau();pilotage();pipeline();ao();journal();if(ficheId)fiche();}
 function onglet(t){document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));document.querySelectorAll("section.tab").forEach(s=>s.classList.toggle("on",s.id==="t-"+t));window.scrollTo(0,0);}
 document.getElementById("nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b)onglet(b.dataset.t);});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){document.getElementById("fiche").hidden=true;document.getElementById("noteBox").hidden=true;ficheId=null;}});
@@ -824,6 +824,84 @@ function profilsTab(d){
         catch(err){etat.textContent="Échec : "+err.message;toast("Échec : "+err.message,true);}finally{go.disabled=false;}};}
     h("div",{id:"pf-liste",style:"display:flex;flex-direction:column;gap:14px"},S);}
   const k=JSON.stringify(d.profils||[]);if(S.dataset.k===k)return;S.dataset.k=k;profilsListe(d,document.getElementById("pf-liste"),local);}
+</script>
+<style>
+/* Positionnements : où en est chaque candidat, chez quel client, à quelle étape */
+.ps-fun{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.ps-fun div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.ps-fun b{font:700 26px/1 var(--display);color:var(--ink)}.ps-fun span{font-size:12px;color:var(--muted)}
+.ps-fun div.on{border-color:var(--accent)}.ps-fun div.on b{color:var(--accent)}.ps-fun div.ko b{color:var(--muted)}
+.ps-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ps-bar select{font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:40px}
+.ps-c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.ps-c .pf-tete h2{margin:0;font-size:19px}
+.ps-i{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:8px 16px;padding:12px 0;border-top:1px solid var(--line2);align-items:start}
+.ps-i .t{font-weight:600;font-size:15px;cursor:pointer;min-width:0}.ps-i .t:hover{color:var(--accent)}
+.ps-i .t small{display:block;font-weight:400;font-size:13px;color:var(--muted);margin-top:2px}
+.ps-i .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ps-i .chips span{font-size:12px;border-radius:999px;padding:2px 9px;background:var(--soft);color:var(--ink2)}
+.ps-i .chips span.ok{color:var(--ok);font-weight:600}.ps-i .chips span.warn{background:var(--warn-soft);color:var(--warn)}
+.ps-i details{grid-column:1/-1;font-size:13px;color:var(--ink2)}.ps-i details summary{cursor:pointer;color:var(--muted)}
+.ps-steps{display:flex;gap:3px;margin-top:8px}.ps-steps i{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.ps-steps i.f{background:var(--accent)}.ps-ref .ps-steps i.f{background:var(--muted)}
+.ps-r{display:flex;flex-direction:column;gap:6px;align-items:stretch}.ps-r .et{font-weight:700;font-size:14px}
+.ps-r .acts{display:flex;flex-wrap:wrap;gap:6px}.ps-ref{opacity:.6}
+@media (max-width:700px){.ps-fun{grid-template-columns:repeat(3,minmax(0,1fr))}.ps-i{grid-template-columns:minmax(0,1fr)}}
+</style>
+<script>
+/* étapes du positionnement ; les anciens statuts des agents (propose, correspond…) comptent comme « à vérifier » */
+const PS_ETAPES=[["a_verifier","À vérifier","proposé par les agents, à vérifier par toi"],["valide","Validé","tu as validé, CV à présenter"],["presente","CV présenté","CV envoyé au client"],["entretien","Entretien","entretien client planifié ou fait"],["retenu","Retenu","le client retient le candidat → contrat"],["refuse","Refusé","refusé (client, candidat ou MC2)"]];
+const PS_SUITE={a_verifier:["valider","Valider le positionnement"],valide:["presente","CV présenté au client"],presente:["entretien","Entretien client"],entretien:["retenu","Candidat retenu"]};
+const PS_CIBLE={valider:"valide",presente:"presente",entretien:"entretien",retenu:"retenu",refuse:"refuse",rouvrir:"a_verifier"};
+const PS_LIB={valider:"Validé",presente:"CV présenté",entretien:"Entretien",retenu:"Retenu",refuse:"Refusé",rouvrir:"Rouvert"};
+function psEtape(s){if(PS_ETAPES.some(e=>e[0]===s))return s;return /refus|perdu|clos/.test(s||"")?"refuse":"a_verifier";}
+function positionnementsTab(d){
+  const S=document.getElementById("t-positionnements");if(!S)return;
+  if(!S.dataset.ok){S.dataset.ok="1";h("h1",{style:"margin:0;font-size:28px"},S,"Positionnements");
+    h("p",{class:"muted",style:"margin:4px 0 0"},S,"Où en est chaque candidat : chez quel client il est positionné, sur quel besoin, à quelle étape, à quel prix. Fais avancer l'étape après chaque échange ; un CV ne compte dans la survie de Matching Vivier qu'une fois présenté au client.");
+    h("div",{class:"ps-fun",id:"ps-fun"},S);const bar=h("div",{class:"ps-bar"},S);h("label",{for:"ps-cand",class:"muted",style:"font-size:13px"},bar,"Filtrer");
+    const sel=h("select",{id:"ps-cand","aria-label":"Candidat"},bar);sel.onchange=()=>{S.dataset.k="";positionnementsTab(window.__psD||d);};
+    const sel2=h("select",{id:"ps-et","aria-label":"Étape"},bar);sel2.onchange=sel.onchange;
+    h("option",{value:""},sel2,"Toutes les étapes");h("option",{value:"actifs"},sel2,"En cours (hors refusés)");PS_ETAPES.forEach(([k,l])=>h("option",{value:k},sel2,l));sel2.value="actifs";
+    h("div",{id:"ps-liste",style:"display:flex;flex-direction:column;gap:14px"},S);}
+  window.__psD=d;const P=(d.positionnements||[]).map(p=>({...p,etape:psEtape(p.statut)}));
+  const dec=typeof decisionDe==="function"?P.map(p=>decisionDe("positionnement",p.id)):[];
+  const k=JSON.stringify([P,dec]);if(S.dataset.k===k)return;S.dataset.k=k;
+  const F=document.getElementById("ps-fun");F.replaceChildren();
+  for(const [e,l,t] of PS_ETAPES){const n=P.filter(p=>p.etape===e).length;const c=h("div",{title:t,class:e==="refuse"?"ko":(n&&e!=="a_verifier"?"on":"")},F);h("b",{},c,String(n));h("span",{},c,l);}
+  const sel=document.getElementById("ps-cand"),cur=sel.value;sel.replaceChildren();h("option",{value:""},sel,"Tous les candidats");
+  const cands=[...new Map(P.map(p=>[p.candidat_id,p])).values()];
+  cands.forEach(p=>h("option",{value:String(p.candidat_id)},sel,(p.candidat_nom||("Profil "+p.initiales))+" · "+(p.candidat_titre||"")));sel.value=cur;
+  const fe=document.getElementById("ps-et").value;
+  const L=document.getElementById("ps-liste");L.replaceChildren();
+  if(!P.length){h("div",{class:"card muted"},L,"Aucun positionnement pour l'instant. Dépose un profil (onglet Profils) : Matching Vivier positionne le candidat sur les besoins qui lui correspondent.");return;}
+  for(const c of cands){if(sel.value&&String(c.candidat_id)!==sel.value)continue;
+    const mes=P.filter(p=>p.candidat_id===c.candidat_id&&(!fe||(fe==="actifs"?p.etape!=="refuse":p.etape===fe)));if(!mes.length)continue;
+    const tous=P.filter(p=>p.candidat_id===c.candidat_id);
+    const card=h("article",{class:"ps-c"},L);const t=h("div",{class:"pf-tete"},card);h("span",{class:"av"},t,c.initiales.replace(/[ .]/g,""));
+    const x=h("div",{style:"flex:1;min-width:0"},t);h("h2",{},x,(c.candidat_nom||("Profil "+c.initiales))+" · "+(c.candidat_titre||""));
+    const ch=h("div",{class:"pf-chips"},x);const clients=[...new Set(tous.filter(p=>p.etape!=="refuse").map(p=>p.client))];
+    [`${tous.length} positionnement${tous.length>1?"s":""}`,clients.length&&(clients.length+" client"+(clients.length>1?"s":"")+" : "+clients.join(", ")),c.disponibilite&&("disponible : "+c.disponibilite)].filter(Boolean).forEach(v=>h("span",{},ch,v));
+    if(!c.pretention_connue)h("span",{class:"warn"},ch,"prétention à confirmer");
+    for(const p of mes){const i=h("div",{class:"ps-i"+(p.etape==="refuse"?" ps-ref":"")},card);
+      const g=h("div",{},i);const tt=h("div",{class:"t",role:"button",tabindex:"0"},g,`${p.client} · ${p.besoin}`);
+      if(typeof ouvrirFiche==="function"){tt.onclick=()=>ouvrirFiche(p.besoin_id);tt.onkeydown=e=>{if(e.key==="Enter")ouvrirFiche(p.besoin_id);};}
+      h("small",{},tt,[`besoin ${p.besoin_id}`,p.niveau&&("niveau "+p.niveau),p.lieu,"positionné le "+String(p.cree||"").slice(0,10),p.maj&&p.maj!==p.cree&&("maj "+String(p.maj).slice(0,10))].filter(Boolean).join(" · "));
+      const cp=h("div",{class:"chips"},g);
+      if(p.tjm_vise)h("span",{},cp,`TJM visé ${Math.round(p.tjm_vise)} €/j`);
+      if(p.mc2_estimee!=null)h("span",{class:p.mc2_estimee>=100?"ok":"warn"},cp,`MC2 ${Math.round(p.mc2_estimee)} €/j`);
+      if(p.joignable)h("span",{class:"ok"},cp,"contact : "+(p.contact||"").trim()+(p.contact_poste?" ("+(p.contact_poste.length>60?p.contact_poste.slice(0,58)+"…":p.contact_poste)+")":""));else h("span",{class:"warn"},cp,"interlocuteur à trouver");
+      const st=h("div",{class:"ps-steps","aria-hidden":"true"},g);const idx=PS_ETAPES.findIndex(e=>e[0]===p.etape);
+      PS_ETAPES.slice(0,5).forEach((e,j)=>h("i",{class:(p.etape==="refuse"||j<=idx)?"f":""},st));
+      const r=h("div",{class:"ps-r"},i);h("div",{class:"et"},r,(PS_ETAPES[idx]||PS_ETAPES[0])[1]);
+      /* en ligne : décision en attente de synchro, ou appliquée mais pas encore visible dans l'état publié */
+      let d0=typeof decisionDe==="function"?decisionDe("positionnement",p.id):null;const a=h("div",{class:"acts"},r);
+      if(d0&&d0.statut!=="a_appliquer"&&!(psEtape(PS_CIBLE[d0.action])!==p.etape&&Date.parse(d0.at)>Date.parse(d.genere_le||0)))d0=null;
+      if(d0){h("span",{class:"decide"},a,`${PS_LIB[d0.action]||d0.action} · ${d0.statut==="a_appliquer"?"appliqué à la prochaine synchro":"appliqué"}`);}
+      else{const s=PS_SUITE[p.etape];if(s)bouton(a,s[1],"ok sm","positionnement",p.id,s[0],false);
+        if(p.etape==="refuse")bouton(a,"Rouvrir","sm","positionnement",p.id,"rouvrir",false);
+        else if(p.etape!=="retenu")bouton(a,"Refusé","bad sm","positionnement",p.id,"refuse",false);}
+      if(p.argument){const dt=h("details",{},i);h("summary",{},dt,"Argumentaire du positionnement");h("p",{style:"margin:6px 0 0;white-space:pre-wrap"},dt,p.argument);}}}
+  if(!L.children.length)h("div",{class:"card muted"},L,"Aucun positionnement à cette étape.");}
 </script>
 <!--/OPENSPACE-->
 
